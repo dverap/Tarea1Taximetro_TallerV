@@ -64,6 +64,12 @@ El diseño del software se centra en las buenas prácticas para sistemas embebid
 | **Pulsador FPS** | Un terminal                     | `PA5`                     |
 
 ***
+## Esquemáticos
+<img width="1143" height="883" alt="image" src="https://github.com/user-attachments/assets/611a64b7-dcdd-4459-94e3-23d8d36701b9" />
+<img width="1137" height="883" alt="image" src="https://github.com/user-attachments/assets/a2a5847b-70f7-418e-9b0c-439ea316ebe7" />
+
+
+
 
 ## 🚀 Cómo Usar
 
