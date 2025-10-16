@@ -41,16 +41,8 @@ TIM_HandleTypeDef htim3;
 /* USER CODE BEGIN PV */
 // --- Variables Globales ---
 const uint8_t seven_seg_patterns[10] = {
-    0b00111111, // 0
-    0b00000110, // 1
-    0b01011011, // 2
-    0b01001111, // 3
-    0b01100110, // 4
-    0b01101101, // 5
-    0b01111101, // 6
-    0b00000111, // 7
-    0b01111111, // 8
-    0b01101111  // 9
+    0b00111111, 0b00000110, 0b01011011, 0b01001111, 0b01100110,
+    0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01101111
 };
 volatile uint16_t counter_value = 1;
 volatile uint8_t active_digit = 0;
@@ -75,7 +67,6 @@ void update_timer_for_fps(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 /**
@@ -84,7 +75,6 @@ void update_timer_for_fps(void);
   */
 int main(void)
 {
-  /* Inicialización del sistema */
   HAL_Init();
   SystemClock_Config();
   MX_GPIO_Init();
@@ -92,16 +82,13 @@ int main(void)
   MX_TIM3_Init();
 
   /* USER CODE BEGIN 2 */
-  // Iniciar periféricos
   HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
   __HAL_TIM_SET_COUNTER(&htim2, 1);
   HAL_TIM_Base_Start_IT(&htim3);
-
-  // Establecer la velocidad de refresco inicial
   update_timer_for_fps();
   /* USER CODE END 2 */
 
-  /* Bucle infinito */
+  /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
@@ -173,7 +160,12 @@ static void MX_TIM2_Init(void)
   htim2.Init.Period = 4095;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
+
+  // ***** LA CORRECCIÓN ESTÁ AQUÍ *****
+  // Cambiamos de TI12 (cuenta 4 por ciclo) a TI1 (cuenta 1 o 2 por ciclo,
+  // lo que usualmente corresponde a 1 por "clic").
+  sConfig.EncoderMode = TIM_ENCODERMODE_TI1;
+
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
@@ -265,9 +257,6 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-/**
-  * @brief  Callback de la interrupción externa (botón).
-  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
     if (GPIO_Pin == GPIO_PIN_5) {
@@ -279,9 +268,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     }
 }
 
-/**
-  * @brief  Callback de la interrupción del timer (refresco del display).
-  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM3) {
@@ -300,31 +286,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     }
 }
 
-/**
-  * @brief  Actualiza la velocidad del timer y fuerza la recarga inmediata.
-  */
 void update_timer_for_fps(void) {
     uint32_t refresh_freq = fps_levels[fps_index] * 4;
     if (refresh_freq == 0) return;
     uint32_t new_arr_value = (10000 / refresh_freq) - 1;
     __HAL_TIM_SET_AUTORELOAD(&htim3, new_arr_value);
-
-    // Forzar la actualización inmediata del timer escribiendo en el registro de generación de eventos.
-    // Esta es la forma universal y compatible entre todas las versiones de HAL.
     htim3.Instance->EGR = TIM_EGR_UG;
 }
 
-/**
-  * @brief  Apaga todos los segmentos y dígitos.
-  */
 void clear_display(void) {
     HAL_GPIO_WritePin(GPIOB, SEG_A_Pin|SEG_E_Pin|SEG_F_Pin|SEG_B_Pin|SEG_G_Pin|SEG_C_Pin|SEG_D_Pin, GPIO_PIN_SET);
     HAL_GPIO_WritePin(GPIOA, DIGIT_1_Pin|DIGIT_2_Pin|DIGIT_3_Pin|DIGIT_4_Pin, GPIO_PIN_SET);
 }
 
-/**
-  * @brief  Establece el patrón de segmentos para un número.
-  */
 void set_segments(uint8_t number) {
     uint8_t pattern = seven_seg_patterns[number];
     HAL_GPIO_WritePin(SEG_A_GPIO_Port, SEG_A_Pin, (pattern & 0x01) ? GPIO_PIN_RESET : GPIO_PIN_SET);
@@ -336,9 +310,6 @@ void set_segments(uint8_t number) {
     HAL_GPIO_WritePin(SEG_G_GPIO_Port, SEG_G_Pin, (pattern & 0x40) ? GPIO_PIN_RESET : GPIO_PIN_SET);
 }
 
-/**
-  * @brief  Activa el transistor del dígito correspondiente.
-  */
 void set_active_digit(uint8_t digit_num) {
     switch (digit_num) {
         case 0: HAL_GPIO_WritePin(DIGIT_1_GPIO_Port, DIGIT_1_Pin, GPIO_PIN_RESET); break;
